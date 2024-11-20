@@ -2,53 +2,58 @@
 #include "gui.h"
 #include "events.h"
 
-GtkWidget *window;
-GtkWidget *grid;
-GtkWidget *display;
+// Widgets used globally
+GtkWidget *entry;
 
-void on_button_clicked(GtkWidget *widget, gpointer data) {
-    const char *button_label = gtk_button_get_label(GTK_BUTTON(widget));
-    handle_event(button_label);
+// Callback function to handle button clicks (delegates to event handlers)
+void on_button_clicked(GtkWidget *button, gpointer user_data) {
+    const char *button_label = gtk_button_get_label(GTK_BUTTON(button));
+    handle_button_click(button_label); // Delegate to events.c
 }
 
-void gui_create_window(int argc, char *argv[]) {
+// Function to create a button and connect its signal
+GtkWidget *create_button(const char *label) {
+    GtkWidget *button = gtk_button_new_with_label(label);
+    g_signal_connect(button, "clicked", G_CALLBACK(on_button_clicked), NULL);
+    return button;
+}
+
+// Function to set up the GUI
+void start_gui(int argc, char *argv[]) {
+    GtkWidget *window;
+    GtkWidget *grid;
+    
+    // Initialize GTK
     gtk_init(&argc, &argv);
 
-    // Create main window
+    // Create a new window
     window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
     gtk_window_set_title(GTK_WINDOW(window), "Calculator");
     gtk_window_set_default_size(GTK_WINDOW(window), 300, 400);
     g_signal_connect(window, "destroy", G_CALLBACK(gtk_main_quit), NULL);
 
-    // Create grid layout
+    // Create a grid layout
     grid = gtk_grid_new();
     gtk_container_add(GTK_CONTAINER(window), grid);
 
-    // Create display
-    display = gtk_entry_new();
-    gtk_editable_set_editable(GTK_EDITABLE(display), FALSE);
-    gtk_entry_set_alignment(GTK_ENTRY(display), 1.0);
-    gtk_grid_attach(GTK_GRID(grid), display, 0, 0, 4, 1);
+    // Create the entry widget for displaying input/output
+    entry = gtk_entry_new();
+    gtk_editable_set_editable(GTK_EDITABLE(entry), FALSE);
+    gtk_grid_attach(GTK_GRID(grid), entry, 0, 0, 4, 1);
 
-    // Button labels
+    // Create buttons for digits and basic operations
     const char *buttons[] = {
         "7", "8", "9", "/",
         "4", "5", "6", "*",
         "1", "2", "3", "-",
-        "0", ".", "=", "+"
+        "0", "C", "=", "+"
     };
 
-    // Add buttons to grid
-    int row = 1, col = 0;
-    for (int i = 0; i < 16; i++) {
-        GtkWidget *button = gtk_button_new_with_label(buttons[i]);
-        g_signal_connect(button, "clicked", G_CALLBACK(on_button_clicked), NULL);
-        gtk_grid_attach(GTK_GRID(grid), button, col, row, 1, 1);
-
-        col++;
-        if (col == 4) {
-            col = 0;
-            row++;
+    int pos = 0;
+    for (int row = 1; row <= 4; row++) {
+        for (int col = 0; col < 4; col++) {
+            GtkWidget *button = create_button(buttons[pos++]);
+            gtk_grid_attach(GTK_GRID(grid), button, col, row, 1, 1);
         }
     }
 
@@ -59,6 +64,7 @@ void gui_create_window(int argc, char *argv[]) {
     gtk_main();
 }
 
-void gui_update_display(const char *text) {
-    gtk_entry_set_text(GTK_ENTRY(display), text);
+// Function to update the calculator's entry field (used by event handlers)
+void update_display(const char *text) {
+    gtk_entry_set_text(GTK_ENTRY(entry), text);
 }
