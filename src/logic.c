@@ -1,98 +1,62 @@
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <math.h>
+#include <stdio.h>
 #include "logic.h"
-#include "gui.h"
 
+// Static variables to store the current state
 static char current_input[256] = "";
-static double result = 0;
-static char last_operator = '\0';
-static int reset_input = 0;
+static char current_operator = '\0';
+static double stored_value = 0.0;
 
-void process_input(const char *input) {
-    if (strcmp(input, "C") == 0) {
-        clear_calculator();
-        return;
+// Internal helper function to perform calculations
+static double calculate(double a, double b, char operator) {
+    switch (operator) {
+        case '+': return a + b;
+        case '-': return a - b;
+        case '*': return a * b;
+        case '/': return (b != 0) ? a / b : 0; // Avoid division by zero
+        default: return b; // No operation
     }
-
-    if (strcmp(input, "=") == 0) {
-        calculate_result();
-        return;
-    }
-
-    if (strchr("+-*/", input[0]) != NULL) {
-        set_operator(input[0]);
-        return;
-    }
-
-    append_input(input);
 }
 
-void calculate_result() {
-    double current_number = atof(current_input);
-
-    switch (last_operator) {
-        case '+':
-            result += current_number;
-            break;
-        case '-':
-            result -= current_number;
-            break;
-        case '*':
-            result *= current_number;
-            break;
-        case '/':
-            if (current_number != 0) {
-                result /= current_number;
-            } else {
-                gui_update_display("Error: Divide by 0");
-                clear_calculator();
-                return;
-            }
-            break;
-        default:
-            result = current_number;
-            break;
+// Appends a digit or decimal point to the current input
+void append_to_input(const char *value) {
+    if (strlen(current_input) + strlen(value) < sizeof(current_input)) {
+        strcat(current_input, value);
     }
-
-    char result_str[256];
-    snprintf(result_str, sizeof(result_str), "%g", result);
-    gui_update_display(result_str);
-
-    // Prepare for the next operation
-    reset_input = 1;
-    strcpy(current_input, result_str);
-    last_operator = '\0';
 }
 
+// Handles an operator press
 void set_operator(char operator) {
-    if (last_operator != '\0' && !reset_input) {
-        calculate_result();
-    } else {
-        result = atof(current_input);
-    }
-
-    last_operator = operator;
-    reset_input = 1;
-}
-
-void append_input(const char *input) {
-    if (reset_input) {
-        strcpy(current_input, "");
-        reset_input = 0;
-    }
-
-    if (strlen(current_input) + strlen(input) < sizeof(current_input)) {
-        strcat(current_input, input);
-        gui_update_display(current_input);
+    if (strlen(current_input) > 0) {
+        stored_value = atof(current_input);
+        current_operator = operator;
+        current_input[0] = '\0'; // Clear the input for the next operand
     }
 }
 
-void clear_calculator() {
-    result = 0;
-    last_operator = '\0';
-    reset_input = 0;
-    strcpy(current_input, "");
-    gui_update_display("0");
+// Clears the current input and state
+void clear_all() {
+    current_input[0] = '\0';
+    stored_value = 0.0;
+    current_operator = '\0';
+}
+
+// Processes the "=" button press
+void calculate_result() {
+    if (strlen(current_input) > 0 && current_operator != '\0') {
+        double current_value = atof(current_input);
+        double result = calculate(stored_value, current_value, current_operator);
+        
+        // Convert the result back to a string
+        snprintf(current_input, sizeof(current_input), "%.10g", result);
+        
+        // Reset operator for the next calculation
+        current_operator = '\0';
+    }
+}
+
+// Retrieves the current input for display
+const char* get_current_input() {
+    return current_input;
 }
